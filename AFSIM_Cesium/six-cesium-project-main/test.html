@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        <script>
+            class Subject {
+                constructor() {
+                    this.observers = [];
+                }
+                subscribe(observer) {
+                    this.observers.push(observer);
+                }
+                unSubscribe(ob) {
+                    this.observers.filter(item => {
+                        item === ob;
+                    });
+                }
+                notify(data) {
+                    this.observers.forEach(item => {
+                        item.notify(data);
+                    });
+                }
+            }
+
+            class Observer {
+                constructor(name) {
+                    this.name = name;
+                }
+                notify(data) {
+                    console.log(`${this.name} is notifying ${data}`);
+                }
+            }
+
+            const subject = new Subject();
+            const observer1 = new Observer("H");
+            const observer2 = new Observer("X");
+
+            subject.subscribe(observer1);
+            subject.subscribe(observer2);
+
+            subject.notify("Success!");
+        </script>
+    </body>
+</html>

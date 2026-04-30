@@ -1,0 +1,151 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .retro-modal {
+    background-color: #e0e0e0;
+    border: 4px solid #000;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+    font-family: 'Courier New', monospace;
+  }
+  
+  .modal-header {
+    background-color: #333;
+    color: #fff;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #000;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  
+  .close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .selection-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .retro-button {
+    padding: 12px 20px;
+    border: 3px solid #000;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  .retro-button:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  .local-model-btn {
+    background-color: #2196F3;
+  }
+  
+  .existing-model-btn {
+    background-color: #FF9800;
+  }
+  
+  .modal-footer {
+    padding: 10px 15px;
+    background-color: #ddd;
+    border-top: 2px solid #000;
+    text-align: center;
+    font-style: italic;
+  }
+  /* Add these new styles to the existing file */
+.crt-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .crt-effect::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.06),
+        rgba(0, 255, 0, 0.02),
+        rgba(0, 0, 255, 0.06)
+      );
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+  
+  .scanlines {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .scanlines::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 0.5%,
+      transparent 1%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  .pixel-font {
+    font-family: 'Press Start 2P', cursive, 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+  
+  .button-icon {
+    margin-right: 10px;
+  }
+  
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');

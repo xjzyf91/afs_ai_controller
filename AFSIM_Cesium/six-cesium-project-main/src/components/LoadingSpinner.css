@@ -1,0 +1,186 @@
+.loading-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.stars-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.1), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.05), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.08), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.06), transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.04), transparent);
+    background-repeat: repeat;
+    background-size: 200px 100px;
+    animation: stars 20s linear infinite;
+    opacity: 0.6;
+}
+
+@keyframes stars {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-100px); }
+}
+
+.loading-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 400px;
+    padding: 40px 20px;
+    color: white;
+    font-family: 'Inter', 'Microsoft YaHei', '微软雅黑', sans-serif;
+}
+
+.earth-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 30px;
+    position: relative;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(79, 172, 254, 0.3);
+    animation: earthRotate 4s linear infinite;
+}
+
+@keyframes earthRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.earth-inner {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.continent {
+    position: absolute;
+    background: rgba(255,255,255,0.2);
+}
+
+.continent-1 {
+    top: 10px;
+    left: 15px;
+    width: 20px;
+    height: 15px;
+    border-radius: 50% 20% 50% 20%;
+    animation: continentMove 6s ease-in-out infinite;
+}
+
+.continent-2 {
+    bottom: 8px;
+    right: 12px;
+    width: 15px;
+    height: 12px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 30% 70% 30% 70%;
+    animation: continentMove 8s ease-in-out infinite reverse;
+}
+
+@keyframes continentMove {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.1); }
+}
+
+.loading-title {
+    margin: 0 0 15px 0;
+    font-size: 24px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleGlow 3s ease-in-out infinite;
+}
+
+@keyframes titleGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.loading-subtitle {
+    margin: 0 0 30px 0;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+}
+
+.progress-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 50%, #4facfe 100%);
+    border-radius: 3px;
+    animation: progressFlow 2.5s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+}
+
+@keyframes progressFlow {
+    0% { width: 0%; transform: translateX(-100%); }
+    50% { width: 100%; transform: translateX(0%); }
+    100% { width: 0%; transform: translateX(100%); }
+}
+
+.loading-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4facfe;
+    animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+.loading-text {
+    margin-left: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+} 

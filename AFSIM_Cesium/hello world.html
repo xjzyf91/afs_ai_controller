@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFSIM-Cesium 态势可视化系统</title>
+    <!-- 国内Cesium CDN（避免外网加载失败，兼容1.114+版本） -->
+    <script src="https://cdn.jsdelivr.net/npm/cesium@1.114/Build/Cesium/Cesium.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/cesium@1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100vw; height: 100vh; overflow: hidden; }
+        #cesiumContainer { width: 100%; height: 100%; }
+        /* 日志面板（可选，方便查看通信状态） */
+        .log-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 380px;
+            height: 200px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            font-size: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-y: auto;
+            z-index: 100;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .log-panel h3 { margin-bottom: 8px; color: #40a9ff; }
+        .log-item { margin: 4px 0; line-height: 1.4; }
+        .log-info { color: #53d312; }
+        .log-warn { color: #e6a23c; }
+        .log-error { color: #f56c6c; }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    <!-- 可选日志面板，查看通信状态 -->
+    <div class="log-panel">
+        <h3>AFSIM 通信日志</h3>
+        <div id="logContent"></div>
+    </div>
+
+    <script>
+        /************************ 配置项（与C++服务端严格一致） ************************/
+        const WS_SERVER_URL = '"ws://localhost:8080"'; // WS地址+协议
+        const RECONNECT_INTERVAL = 5000; // 断连重连间隔（毫秒）
+        const DEFAULT_ALT = 500.0;      // 作战单元默认高度（米）
+        // 替换为你的Cesium Ion Token（免费获取：https://cesium.com/ion/）
+        Cesium.Ion.defaultAccessToken = "请替换为你的Cesium Token";
+
+        /************************ 全局变量 ************************/
+        let viewer; // Cesium场景实例
+        const unitEntities = {}; // 作战单元实体缓存（key: 单元ID，value: Cesium实体）
+        let ws = null; // WebSocket实例
+        let reconnectTimer = null; // 重连定时器
+        const logContent = document.getElementById('logContent'); // 日志面板DOM
+
+        /************************ 工具函数 ************************/
+        /**
+         * 日志输出（控制台+页面面板）
+         * @param {string} type 日志类型：info/warn/error
+         * @param {string} msg 日志信息
+         */
+        function log(type, msg) {
+            const time = new Date().toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            const logStr = `[${time}] [${type.toUpperCase()}] ${msg}`;
+            // 控制台输出
+            switch(type) {
+                case 'info': console.log(logStr); break;
+                case 'warn': console.warn(logStr); break;
+                case 'error': console.error(logStr); break;
+            }
+            // 页面面板输出
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.innerText = logStr;
+            logContent.appendChild(logItem);
+            // 滚动到最新日志
+            logContent.scrollTop = logContent.scrollHeight;
+            // 限制日志条数，避免内存占用
+            if (logContent.children.length > 50) {
+                logContent.removeChild(logContent.firstChild);
+            }
+        }
+
+        /**
+         * 解析C++服务端二进制协议数据
+         * @param {ArrayBuffer} arrayBuffer 服务端发送的二进制数据
+         * @returns {object|null} 解析后的JSON态势数据，失败返回null
+         */
+        function parseSituationData(arrayBuffer) {
+            try {
+                const data = new Uint8Array(arrayBuffer);
+                // 协议头至少8字节（4长度+2类型+2标志）
+                if (data.length < 8) {
+                    log('warn', `数据长度不足，无法解析（接收长度：${data.length}）`);
+                    return null;
+                }
+                // 解析协议头（大端序，与C++服务端一致）
+                const dataView = new DataView(data.buffer);
+                const bodyLen = dataView.getUint32(0, false); // 4字节数据体长度（大端）
+                // const dataType = dataView.getUint16(4, false); // 2字节协议类型（可按需使用）
+                // const dataFlag = dataView.getUint16(6, false); // 2字节协议标志（可按需使用）
+
+                // 校验数据体长度是否匹配
+                if (8 + bodyLen > data.length) {
+                    log('warn', `数据体长度不匹配（协议声明：${bodyLen}，实际剩余：${data.length - 8}）`);
+                    return null;
+                }
+                // 解析JSON数据体（UTF-8编码）
+                const bodyStr = new TextDecoder('utf-8').decode(data.slice(8, 8 + bodyLen));
+                const situation = JSON.parse(bodyStr);
+                return situation;
+            } catch (e) {
+                log('error', `数据解析失败：${e.message}`);
+                return null;
+            }
+        }
+
+        /************************ Cesium场景初始化 ************************/
+        function initCesium() {
+            try {
+                // 初始化Cesium视图
+                viewer = new Cesium.Viewer('cesiumContainer', {
+                    terrainProvider: Cesium.createWorldTerrain(), // 加载真实三维地形
+                    baseLayerPicker: false, // 隐藏图层选择器
+                    homeButton: false,      // 隐藏主页按钮
+                    sceneModePicker: false, // 隐藏场景模式切换
+                    navigationHelpButton: false, // 隐藏帮助按钮
+                    timeline: false,        // 隐藏时间线
+                    animation: false,       // 隐藏动画控件
+                    fullscreenButton: true, // 保留全屏按钮
+                    geocoder: false         // 隐藏地理编码
+                });
+
+                // 隐藏Cesium默认logo
+                viewer.cesiumWidget.creditContainer.style.display = 'none';
+
+                // 初始视角定位北京（与C++服务端模拟数据匹配）
+                viewer.camera.setView({
+                    destination: Cesium.Cartesian3.fromDegrees(116.403963, 39.915119, 10000), // 经纬度+高度
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0), // 水平方向角度
+                        pitch: Cesium.Math.toRadians(-30), // 俯仰角度（向下30度）
+                        roll: 0 // 旋转角度
+                    }
+                });
+
+                // 视角控制限制（避免视角过偏）
+                viewer.camera.constraints.minimumHeight = 100; // 最小高度100米
+                viewer.camera.constraints.maximumHeight = 50000; // 最大高度5万米
+
+                log('info', 'Cesium场景初始化成功，初始视角定位北京');
+            } catch (e) {
+                log('error', `Cesium初始化失败：${e.message}`);
+                alert(`Cesium加载失败，请检查Token是否有效：${e.message}`);
+            }
+        }
+
+        /************************ 作战单元可视化更新 ************************/
+        /**
+         * 更新Cesium中的作战单元实体
+         * @param {object} situation 态势数据（含units数组）
+         */
+        function updateCesiumUnits(situation) {
+            if (!viewer || !situation || !Array.isArray(situation.units)) return;
+
+            situation.units.forEach(unit => {
+                // 校验必要字段
+                if (!unit.id || unit.lon === undefined || unit.lat === undefined) {
+                    log('warn', `作战单元数据不完整，跳过更新：${JSON.stringify(unit)}`);
+                    return;
+                }
+
+                // 经纬度范围校验（避免超出地球范围）
+                const lon = Math.max(-180, Math.min(180, unit.lon));
+                const lat = Math.max(-90, Math.min(90, unit.lat));
+                const alt = unit.alt || DEFAULT_ALT; // 高度，默认500米
+                const hp = unit.hp || 100; // 血量，默认100
+
+                // 若单元已存在，更新位置和状态；不存在则创建新实体
+                if (unitEntities[unit.id]) {
+                    // 更新位置
+                    unitEntities[unit.id].position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+                    // 更新标签内容
+                    unitEntities[unit.id].label.text = getUnitLabelText(unit.id, lon, lat, alt, hp);
+                } else {
+                    // 创建新的作战单元实体
+                    const entity = viewer.entities.add({
+                        id: unit.id,
+                        position: Cesium.Cartesian3.fromDegrees(lon, lat, alt),
+                        // 点标记样式（红色主体+白色描边，随距离缩放）
+                        point: {
+                            pixelSize: 15,
+                            color: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 2,
+                            // 距离缩放：近大远小（1000米时1倍，10万米时0.1倍）
+                            scaleByDistance: new Cesium.NearFarScalar(1000, 1, 100000, 0.1)
+                        },
+                        // 信息标签（显示单元ID、血量、经纬度、高度）
+                        label: {
+                            text: getUnitLabelText(unit.id, lon, lat, alt, hp),
+                            font: '14pt 微软雅黑',
+                            pixelOffset: new Cesium.Cartesian2(0, 30), // 标签在点下方30像素
+                            fillColor: Cesium.Color.WHITE,
+                            outlineColor: Cesium.Color.BLACK,
+                            outlineWidth: 1,
+                            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                            // 标签随距离缩放
+                            scaleByDistance: new Cesium.NearFarScalar(1000, 1, 100000, 0.1),
+                            // 隐藏距离过远的标签
+                            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 30000)
+                        }
+                    });
+                    unitEntities[unit.id] = entity;
+                    log('info', `创建作战单元实体，ID：${unit.id}`);
+                }
+            });
+        }
+
+        /**
+         * 生成作战单元标签文本
+         * @param {number|string} id 单元ID
+         * @param {number} lon 经度
+         * @param {number} lat 纬度
+         * @param {number} alt 高度
+         * @param {number} hp 血量
+         * @returns {string} 格式化的标签文本
+         */
+        function getUnitLabelText(id, lon, lat, alt, hp) {
+            return `作战单元 ${id}
+血量：${hp}
+经度：${lon.toFixed(6)}
+纬度：${lat.toFixed(6)}
+高度：${alt.toFixed(0)}m`;
+        }
+
+        /************************ WebSocket连接管理 ************************/
+        /**
+         * 建立与C++服务端的WebSocket连接
+         */
+        function connectWebSocket() {
+            // 清除原有重连定时器
+            clearTimeout(reconnectTimer);
+            // 关闭原有连接
+            if (ws) {
+                ws.close(1000, '主动重连');
+                ws = null;
+            }
+
+            try {
+                // 创建WebSocket实例（匹配服务端协议）
+                ws = new WebSocket(WS_SERVER_URL);
+                log('info', `正在连接AFSIM C++服务端：${WS_SERVER_URL}`);
+
+                // 连接成功回调
+                ws.onopen = function() {
+                    log('info', 'WebSocket连接成功，开始接收态势数据');
+                    // 向服务端发送连接确认指令（可选）
+                    ws.send(JSON.stringify({ cmd: "cesium_connected", msg: "前端已就绪" }));
+                };
+
+                // 接收数据回调（核心：处理服务端推送的态势数据）
+                ws.onmessage = function(event) {
+                    // 服务端发送的是二进制数据，解析为ArrayBuffer
+                    if (event.data instanceof Blob) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const situation = parseSituationData(e.target.result);
+                            if (situation) {
+                                updateCesiumUnits(situation); // 更新Cesium可视化
+                            }
+                        };
+                        reader.readAsArrayBuffer(event.data);
+                    } else if (event.data instanceof ArrayBuffer) {
+                        const situation = parseSituationData(event.data);
+                        if (situation) {
+                            updateCesiumUnits(situation);
+                        }
+                    } else {
+                        // 接收文本数据（如服务端确认消息）
+                        log('info', `收到服务端文本消息：${event.data}`);
+                    }
+                };
+
+                // 连接错误回调
+                ws.onerror = function(error) {
+                    log('error', `WebSocket连接错误：${JSON.stringify(error)}`);
+                };
+
+                // 连接关闭回调
+                ws.onclose = function(event) {
+                    log('warn', `WebSocket连接断开（码：${event.code}，原因：${event.reason || '未知'}），${RECONNECT_INTERVAL/1000}秒后自动重连`);
+                    // 清空重连定时器，避免重复创建
+                    clearTimeout(reconnectTimer);
+                    // 定时重连
+                    reconnectTimer = setTimeout(connectWebSocket, RECONNECT_INTERVAL);
+                };
+            } catch (e) {
+                log('error', `创建WebSocket连接失败：${e.message}`);
+                reconnectTimer = setTimeout(connectWebSocket, RECONNECT_INTERVAL);
+            }
+        }
+
+        /************************ 程序入口 ************************/
+        window.onload = function() {
+            // 1. 初始化Cesium场景
+            initCesium();
+            // 2. 建立WebSocket连接
+            connectWebSocket();
+
+            // 页面关闭时，优雅关闭连接
+            window.onbeforeunload = function() {
+                if (ws) {
+                    ws.close(1000, '页面关闭');
+                }
+                clearTimeout(reconnectTimer);
+            };
+        };
+    </script>
+</body>
+</html>

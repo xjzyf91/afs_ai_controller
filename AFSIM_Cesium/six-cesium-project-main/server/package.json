@@ -1,0 +1,12 @@
+{
+    "name": "trajectory-simulation-server",
+    "version": "1.0.0",
+    "description": "WebSocket server for real-time trajectory simulation",
+    "main": "trajectory_server.js",
+    "scripts": {
+      "start": "node trajectory_server.js"
+    },
+    "dependencies": {
+      "ws": "^8.16.0"
+    }
+  } 

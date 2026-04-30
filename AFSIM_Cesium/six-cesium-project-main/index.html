@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="./src/assets/webIcon.webp"
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <!-- 预加载关键资源 -->
+        <link rel="preload" href="/src/main.tsx" as="script" crossorigin />
+        <link
+            rel="preload"
+            href="/src/view/FirstPage.tsx"
+            as="script"
+            crossorigin
+        />
+
+        <!-- 预连接到外部资源 -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+        <!-- 预加载关键字体 -->
+        <link
+            rel="preload"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
+        />
+        <noscript
+            ><link
+                rel="stylesheet"
+                href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        /></noscript>
+
+        <!-- 关键CSS内联 -->
+        <style>
+            /* 关键渲染路径CSS */
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: "Inter", "Microsoft YaHei", "微软雅黑", sans-serif;
+                background-color: #f0f0f0;
+                overflow: hidden;
+            }
+
+            #root {
+                width: 100vw;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 预设header样式避免布局偏移 */
+            .container {
+                width: 100%;
+                height: 100vh;
+                display: flex;
+                background-color: #f0f0f0;
+                flex-direction: column;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+            }
+
+            header {
+                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                padding: 1rem;
+                color: white;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                height: 60px;
+                min-height: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                will-change: transform;
+            }
+
+            header h1 {
+                font-family: "Inter", "Microsoft YaHei", "微软雅黑", sans-serif;
+                margin: 0;
+                font-size: 1.8rem;
+                text-align: center;
+                letter-spacing: 2px;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                font-weight: 600;
+                line-height: 1.2;
+            }
+
+            /* 现代化加载界面 */
+            .loading-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    135deg,
+                    #0f0f23 0%,
+                    #1a1a2e 50%,
+                    #16213e 100%
+                );
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                color: white;
+                overflow: hidden;
+            }
+
+            .stars-bg {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image: radial-gradient(
+                        2px 2px at 20px 30px,
+                        rgba(255, 255, 255, 0.1),
+                        transparent
+                    ),
+                    radial-gradient(
+                        2px 2px at 40px 70px,
+                        rgba(255, 255, 255, 0.05),
+                        transparent
+                    ),
+                    radial-gradient(
+                        1px 1px at 90px 40px,
+                        rgba(255, 255, 255, 0.08),
+                        transparent
+                    ),
+                    radial-gradient(
+                        1px 1px at 130px 80px,
+                        rgba(255, 255, 255, 0.06),
+                        transparent
+                    ),
+                    radial-gradient(
+                        2px 2px at 160px 30px,
+                        rgba(255, 255, 255, 0.04),
+                        transparent
+                    );
+                background-repeat: repeat;
+                background-size: 200px 100px;
+                animation: starsMove 20s linear infinite;
+                opacity: 0.6;
+            }
+
+            .loading-content {
+                position: relative;
+                z-index: 2;
+                text-align: center;
+                max-width: 400px;
+                padding: 40px 20px;
+            }
+
+            .earth-loader {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 30px;
+                position: relative;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 0 30px rgba(79, 172, 254, 0.3);
+                animation: earthSpin 4s linear infinite;
+            }
+
+            .earth-inner {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .continent {
+                position: absolute;
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .continent-1 {
+                top: 10px;
+                left: 15px;
+                width: 20px;
+                height: 15px;
+                border-radius: 50% 20% 50% 20%;
+                animation: continentFloat 6s ease-in-out infinite;
+            }
+
+            .continent-2 {
+                bottom: 8px;
+                right: 12px;
+                width: 15px;
+                height: 12px;
+                background: rgba(255, 255, 255, 0.15);
+                border-radius: 30% 70% 30% 70%;
+                animation: continentFloat 8s ease-in-out infinite reverse;
+            }
+
+            .loading-title {
+                margin: 0 0 15px 0;
+                font-size: 24px;
+                font-weight: 600;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                animation: titlePulse 3s ease-in-out infinite;
+            }
+
+            .loading-subtitle {
+                margin: 0 0 30px 0;
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.7);
+                line-height: 1.5;
+            }
+
+            .loading-progress {
+                width: 100%;
+                height: 6px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 3px;
+                overflow: hidden;
+                margin-bottom: 20px;
+                position: relative;
+            }
+
+            .loading-progress-bar {
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
+                    #4facfe 0%,
+                    #00f2fe 50%,
+                    #4facfe 100%
+                );
+                border-radius: 3px;
+                animation: progressWave 2.5s ease-in-out infinite;
+                box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+            }
+
+            .loading-dots {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.6);
+            }
+
+            .loading-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #4facfe;
+                animation: dotBounce 1.5s ease-in-out infinite;
+            }
+
+            .loading-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .loading-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+            .loading-text-small {
+                margin-left: 10px;
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.6);
+            }
+
+            /* 动画定义 */
+            @keyframes starsMove {
+                0% {
+                    transform: translateY(0);
+                }
+                100% {
+                    transform: translateY(-100px);
+                }
+            }
+
+            @keyframes earthSpin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes continentFloat {
+                0%,
+                100% {
+                    opacity: 0.2;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.4;
+                    transform: scale(1.1);
+                }
+            }
+
+            @keyframes titlePulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.8;
+                }
+            }
+
+            @keyframes progressWave {
+                0% {
+                    width: 0%;
+                    transform: translateX(-100%);
+                }
+                50% {
+                    width: 100%;
+                    transform: translateX(0%);
+                }
+                100% {
+                    width: 0%;
+                    transform: translateX(100%);
+                }
+            }
+
+            @keyframes dotBounce {
+                0%,
+                100% {
+                    opacity: 0.3;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 1;
+                    transform: scale(1.2);
+                }
+            }
+        </style>
+
+        <title>飞行器可视化仿真软件</title>
+    </head>
+    <body>
+        <!-- 现代化加载界面 -->
+        <div id="loading" class="loading-container">
+            <div class="stars-bg"></div>
+            <div class="loading-content">
+                <div class="earth-loader">
+                    <div class="earth-inner">
+                        <div class="continent continent-1"></div>
+                        <div class="continent continent-2"></div>
+                    </div>
+                </div>
+                <h2 class="loading-title">飞行器可视化仿真软件</h2>
+                <p class="loading-subtitle">正在加载核心组件q...</p>
+                <div class="loading-progress">
+                    <div class="loading-progress-bar"></div>
+                </div>
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <span class="loading-text-small">加载中</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="root"></div>
+
+        <!-- 延迟加载非关键脚本 -->
+        <script>
+            // 移除阻塞脚本，延迟执行
+            window.addEventListener("load", function () {
+                // 隐藏加载界面
+                const loading = document.getElementById("loading");
+                if (loading) {
+                    loading.style.opacity = "0";
+                    loading.style.transition = "opacity 0.5s ease-out";
+                    setTimeout(() => {
+                        loading.style.display = "none";
+                    }, 500);
+                }
+
+                // 延迟执行非关键代码
+                setTimeout(() => {
+                    // Fisher-Yates 算法
+                    (function g() {
+                        const arr = [100, 200, 300, 400, 500, 600, 700, 800];
+                        for (let i = 0; i < arr.length; i++) {
+                            let index = Math.floor(Math.random() * arr.length);
+                            [arr[i], arr[index]] = [arr[index], arr[i]];
+                        }
+                        console.log(arr);
+                    })();
+
+                    class Subject {
+                        constructor() {
+                            this.observers = [];
+                        }
+
+                        subscribe(observer) {
+                            this.observers.push(observer);
+                        }
+
+                        unsubscribe(observer) {
+                            this.observers = this.observers.filter(
+                                obs => obs !== observer
+                            );
+                        }
+
+                        notify(data) {
+                            this.observers.forEach(observer =>
+                                observer.update(data)
+                            );
+                        }
+                    }
+
+                    class Observer {
+                        constructor(name) {
+                            this.name = name;
+                        }
+                        update(data) {
+                            console.log(
+                                `Observer received data: ${
+                                    this.name + " " + data
+                                }`
+                            );
+                        }
+                    }
+
+                    // 使用观察者模式
+                    const subject = new Subject();
+                    const observer1 = new Observer("X");
+                    const observer2 = new Observer("H");
+
+                    subject.subscribe(observer1);
+                    subject.subscribe(observer2);
+
+                    subject.notify("Hello Observers!");
+                }, 1000);
+            });
+        </script>
+
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>
