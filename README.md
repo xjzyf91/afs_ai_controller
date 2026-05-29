@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AFSIM AI Controller
 
 External tactical AI and operator console for AFSIM v2.9.0 — transforms AFSIM from script-driven behavior into an adaptive, AI-driven controllable system.
@@ -129,3 +130,7 @@ Distribution Statement F — CUI//REL TO USA ONLY. See repository CLAUDE.md for 
 pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install websockets
 pip install pyside6 -i https://pypi.tuna.tsinghua.edu.cn/simple
+=======
+# afs_ai_controller
+afs_ai_controller
+>>>>>>> 22afd16f86d92079dc16246848f0fc9e1b446646
