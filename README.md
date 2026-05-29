@@ -125,3 +125,7 @@ The plugin would subscribe to simulation observers, pack platform data as JSON, 
 ## License
 
 Distribution Statement F — CUI//REL TO USA ONLY. See repository CLAUDE.md for details.
+
+pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install websockets
+pip install pyside6 -i https://pypi.tuna.tsinghua.edu.cn/simple
