@@ -1,609 +1,608 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AFSIM Tactical Display — Cesium 3D Globe</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFSIM Tactical Display — Cesium 3D Globe</title>
 
-<style>
-  html, body, #cesiumContainer {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #202020;
-    font-family: 'Segoe UI', sans-serif;
-  }
-
-  #statusBar {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #0f0;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 9999;
-  }
-
-  #legend {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #ccc;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    z-index: 9999;
-  }
-
-  .legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
-</style>
+    <style>
+        html,
+        body,
+        #cesiumContainer {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #202020;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        #statusBar {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #0f0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        
+        #legend {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #ccc;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 9999;
+        }
+        
+        .legend-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 
 <body>
-<div id="cesiumContainer"></div>
+    <div id="cesiumContainer"></div>
 
-<div id="statusBar">Loading Cesium...</div>
+    <div id="statusBar">Loading Cesium...</div>
 
-<div id="legend">
-  <div><span class="legend-dot" style="background:#4488ff;"></span> Friendly (BLUE)</div>
-  <div><span class="legend-dot" style="background:#ff4444;"></span> Hostile (RED)</div>
-  <div><span class="legend-dot" style="background:#888;"></span> Destroyed</div>
-</div>
+    <div id="legend">
+        <div><span class="legend-dot" style="background:#4488ff;"></span> Friendly (BLUE)</div>
+        <div><span class="legend-dot" style="background:#ff4444;"></span> Hostile (RED)</div>
+        <div><span class="legend-dot" style="background:#888;"></span> Destroyed</div>
+    </div>
 
-<!-- 本地 Cesium 基础路径：必须放在 Cesium.js 前面 -->
-<script>
-  window.CESIUM_BASE_URL = "file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/";
-</script>
+    <!-- 本地 Cesium 基础路径：必须放在 Cesium.js 前面 -->
+    <script>
+        window.CESIUM_BASE_URL = "file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/";
+    </script>
 
-<link
-  href="file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Widgets/widgets.css"
-  rel="stylesheet">
+    <link href="file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
-<script
-  src="file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Cesium.js">
-</script>
+    <script src="file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Cesium.js">
+    </script>
 
-<script>
-console.log("AFSIM Cesium index.html loaded: NaturalEarthII Globe version 001");
+    <script>
+        console.log("AFSIM Cesium index.html loaded: NaturalEarthII Globe version 001");
 
-let viewer = null;
-let ws = null;
-let lastState = null;
-let firstCameraFlyDone = false;
+        let viewer = null;
+        let ws = null;
+        let lastState = null;
+        let firstCameraFlyDone = false;
 
-const platformEntities = {};
-const rangeRingEntities = {};
-const pendingMessages = [];
+        const platformEntities = {};
+        const rangeRingEntities = {};
+        const pendingMessages = [];
 
-function updateStatus(text, color) {
-  const bar = document.getElementById("statusBar");
-  if (!bar) return;
-  bar.textContent = text;
-  bar.style.color = color || "#0f0";
-}
-
-function getAltM(p) {
-  return Number(p.alt_m ?? p.alt ?? 0);
-}
-
-function getHeadingDeg(p) {
-  return Number(p.heading_deg ?? p.heading ?? p.yaw ?? 0);
-}
-
-function getPitchDeg(p) {
-  return Number(p.pitch_deg ?? p.pitch ?? 0);
-}
-
-function getRollDeg(p) {
-  return Number(p.roll_deg ?? p.roll ?? 0);
-}
-
-function getSide(p) {
-  return String(p.side || "").toUpperCase();
-}
-
-function isValidPlatform(p) {
-  const lat = Number(p.lat);
-  const lon = Number(p.lon);
-  return Number.isFinite(lat) && Number.isFinite(lon);
-}
-
-function lookAtEarth(lon, lat, rangeMeters) {
-  if (!viewer) return;
-
-  const target = Cesium.Cartesian3.fromDegrees(
-    Number(lon),
-    Number(lat),
-    0
-  );
-
-  viewer.camera.lookAt(
-    target,
-    new Cesium.HeadingPitchRange(
-      0.0,
-      -Cesium.Math.PI_OVER_TWO,
-      Number(rangeMeters || 3000000.0)
-    )
-  );
-
-  viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-}
-
-async function addNaturalEarthImagery() {
-  if (!viewer) return;
-
-  try {
-    viewer.imageryLayers.removeAll();
-    console.log("Default imagery layers removed.");
-  } catch (e) {
-    console.warn("remove imagery layers failed:", e);
-  }
-
-  const naturalEarthUrl =
-    "file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Assets/Textures/NaturalEarthII";
-
-  console.log("NaturalEarthII url =", naturalEarthUrl);
-
-  try {
-    let provider = null;
-
-    /*
-      Cesium 新版本推荐 TileMapServiceImageryProvider.fromUrl()
-      老版本可以用 new TileMapServiceImageryProvider()
-      这里两种都兼容。
-    */
-    if (Cesium.TileMapServiceImageryProvider.fromUrl) {
-      provider = await Cesium.TileMapServiceImageryProvider.fromUrl(naturalEarthUrl);
-    } else {
-      provider = new Cesium.TileMapServiceImageryProvider({
-        url: naturalEarthUrl
-      });
-    }
-
-    viewer.imageryLayers.addImageryProvider(provider);
-    console.log("NaturalEarthII imagery provider added.");
-    updateStatus("NaturalEarthII globe loaded", "#0f0");
-  } catch (e) {
-    console.error("NaturalEarthII imagery failed:", e);
-    updateStatus("NaturalEarthII failed, using globe baseColor", "#ff0");
-  }
-}
-
-async function initViewer() {
-  if (typeof Cesium === "undefined") {
-    updateStatus("Cesium failed to load. Check local Cesium path.", "#f00");
-    console.error("Cesium is not defined. Check Cesium.js path.");
-    return false;
-  }
-
-  try {
-    /*
-      如果你有可用 Cesium Ion token，可以在这里填。
-      但本版本主要使用本地 NaturalEarthII，所以 token 不是关键。
-    */
-    // Cesium.Ion.defaultAccessToken = "你的 token";
-
-    viewer = new Cesium.Viewer("cesiumContainer", {
-      animation: false,
-      timeline: false,
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: true,
-      sceneModePicker: true,
-      navigationHelpButton: false,
-      fullscreenButton: true,
-      vrButton: false,
-      selectionIndicator: false,
-      infoBox: false,
-      terrainProvider: new Cesium.EllipsoidTerrainProvider()
-    });
-
-    console.log("Viewer created:", viewer);
-
-    /*
-      关键：使用 Cesium 真实 Globe，不再使用 Debug Earth 椭球体。
-    */
-    viewer.scene.globe.show = true;
-    viewer.scene.globe.enableLighting = false;
-    viewer.scene.globe.depthTestAgainstTerrain = false;
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1f5f9f");
-
-    /*
-      关闭星空、太阳、月亮，避免看起来像纯太空背景。
-    */
-    viewer.scene.skyBox.show = false;
-    viewer.scene.sun.show = false;
-    viewer.scene.moon.show = false;
-    viewer.scene.skyAtmosphere.show = true;
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#202020");
-
-    /*
-      加载本地 NaturalEarthII 影像。
-    */
-    await addNaturalEarthImagery();
-
-    viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
-      Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
-    );
-
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction(function(click) {
-      const picked = viewer.scene.pick(click.position);
-
-      if (
-        Cesium.defined(picked) &&
-        picked.id &&
-        picked.id._platformId !== undefined
-      ) {
-        const pid = picked.id._platformId;
-        selectPlatform(pid);
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: "platform_selected",
-            msg_type: "platform_selected",
-            platform_id: pid
-          }));
+        function updateStatus(text, color) {
+            const bar = document.getElementById("statusBar");
+            if (!bar) return;
+            bar.textContent = text;
+            bar.style.color = color || "#0f0";
         }
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    /*
-      初始视角：西太平洋方向，能看见地球表面。
-    */
-    lookAtEarth(156.0, 25.0, 8000000.0);
+        function getAltM(p) {
+            return Number(p.alt_m ? ? p.alt ? ? 0);
+        }
 
-    updateStatus("Cesium Globe ready. Waiting for platform_state...", "#0f0");
+        function getHeadingDeg(p) {
+            return Number(p.heading_deg ? ? p.heading ? ? p.yaw ? ? 0);
+        }
 
-    while (pendingMessages.length > 0) {
-      handleMessage(pendingMessages.shift());
-    }
+        function getPitchDeg(p) {
+            return Number(p.pitch_deg ? ? p.pitch ? ? 0);
+        }
 
-    return true;
-  } catch (e) {
-    console.error("initViewer failed:", e);
-    updateStatus("initViewer failed: " + e.message, "#f00");
-    return false;
-  }
-}
+        function getRollDeg(p) {
+            return Number(p.roll_deg ? ? p.roll ? ? 0);
+        }
+        // 注释
+        function getSide(p) {
+            return String(p.side || "").toUpperCase();
+        }
 
-function connectWebSocket() {
-  const host = window.location.hostname || "127.0.0.1";
-  ws = new WebSocket(`ws://${host}:9010`);
+        function isValidPlatform(p) {
+            const lat = Number(p.lat);
+            const lon = Number(p.lon);
+            return Number.isFinite(lat) && Number.isFinite(lon);
+        }
 
-  ws.onopen = function() {
-    updateStatus("Connected — waiting for platform_state", "#0f0");
-  };
+        function lookAtEarth(lon, lat, rangeMeters) {
+            if (!viewer) return;
 
-  ws.onmessage = function(event) {
-    try {
-      const msg = JSON.parse(event.data);
-      handleMessage(msg);
-    } catch(e) {
-      console.warn("WS parse error:", e);
-    }
-  };
+            const target = Cesium.Cartesian3.fromDegrees(
+                Number(lon),
+                Number(lat),
+                0
+            );
 
-  ws.onclose = function() {
-    updateStatus("Disconnected — reconnecting in 2s...", "#f00");
-    setTimeout(connectWebSocket, 2000);
-  };
+            viewer.camera.lookAt(
+                target,
+                new Cesium.HeadingPitchRange(
+                    0.0, -Cesium.Math.PI_OVER_TWO,
+                    Number(rangeMeters || 3000000.0)
+                )
+            );
 
-  ws.onerror = function(e) {
-    console.warn("WS error:", e);
-  };
-}
+            viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+        }
 
-function handleMessage(msg) {
-  if (!viewer) {
-    pendingMessages.push(msg);
-    return;
-  }
+        async function addNaturalEarthImagery() {
+            if (!viewer) return;
 
-  const msgType = msg.msg_type || msg.type;
+            try {
+                viewer.imageryLayers.removeAll();
+                console.log("Default imagery layers removed.");
+            } catch (e) {
+                console.warn("remove imagery layers failed:", e);
+            }
 
-  if (msgType === "platform_state") {
-    const platforms = Array.isArray(msg.platforms) ? msg.platforms : [];
-    updatePlatforms(platforms);
-    lastState = msg;
-    updateStatus(`Live — ${platforms.length} platforms`, "#0f0");
-    return;
-  }
+            const naturalEarthUrl =
+                "file:///D:/Afsim/am-2.9.0-win64/afsim-2.9.0-win64/swdev/afs_ai_controller/AFSIM_Cesium/cesium/Build/Cesium/Assets/Textures/NaturalEarthII";
 
-  if (msgType === "action_command" || msgType === "agent_action") {
-    renderActions(msg.actions || []);
-    return;
-  }
+            console.log("NaturalEarthII url =", naturalEarthUrl);
 
-  if (msgType === "event") {
-    renderEvent(msg);
-    return;
-  }
+            try {
+                let provider = null;
 
-  console.warn("Unknown message type:", msgType, msg);
-}
+                /*
+                  Cesium 新版本推荐 TileMapServiceImageryProvider.fromUrl()
+                  老版本可以用 new TileMapServiceImageryProvider()
+                  这里两种都兼容。
+                */
+                if (Cesium.TileMapServiceImageryProvider.fromUrl) {
+                    provider = await Cesium.TileMapServiceImageryProvider.fromUrl(naturalEarthUrl);
+                } else {
+                    provider = new Cesium.TileMapServiceImageryProvider({
+                        url: naturalEarthUrl
+                    });
+                }
 
-function updatePlatforms(platforms) {
-  if (!viewer || !Array.isArray(platforms)) {
-    return;
-  }
+                viewer.imageryLayers.addImageryProvider(provider);
+                console.log("NaturalEarthII imagery provider added.");
+                updateStatus("NaturalEarthII globe loaded", "#0f0");
+            } catch (e) {
+                console.error("NaturalEarthII imagery failed:", e);
+                updateStatus("NaturalEarthII failed, using globe baseColor", "#ff0");
+            }
+        }
 
-  const seen = new Set();
+        async function initViewer() {
+            if (typeof Cesium === "undefined") {
+                updateStatus("Cesium failed to load. Check local Cesium path.", "#f00");
+                console.error("Cesium is not defined. Check Cesium.js path.");
+                return false;
+            }
 
-  platforms.forEach(p => {
-    if (!p || p.id === undefined || !isValidPlatform(p)) {
-      console.warn("Invalid platform skipped:", p);
-      return;
-    }
+            try {
+                /*
+                  如果你有可用 Cesium Ion token，可以在这里填。
+                  但本版本主要使用本地 NaturalEarthII，所以 token 不是关键。
+                */
+                // Cesium.Ion.defaultAccessToken = "你的 token";
 
-    const id = String(p.id);
-    seen.add(id);
+                viewer = new Cesium.Viewer("cesiumContainer", {
+                    animation: false,
+                    timeline: false,
+                    baseLayerPicker: false,
+                    geocoder: false,
+                    homeButton: true,
+                    sceneModePicker: true,
+                    navigationHelpButton: false,
+                    fullscreenButton: true,
+                    vrButton: false,
+                    selectionIndicator: false,
+                    infoBox: false,
+                    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+                });
 
-    if (platformEntities[id]) {
-      updateEntity(platformEntities[id], p);
-    } else {
-      platformEntities[id] = createEntity(p);
-    }
-  });
+                console.log("Viewer created:", viewer);
 
-  Object.keys(platformEntities).forEach(id => {
-    if (!seen.has(id)) {
-      viewer.entities.remove(platformEntities[id]);
-      delete platformEntities[id];
+                /*
+                  关键：使用 Cesium 真实 Globe，不再使用 Debug Earth 椭球体。
+                */
+                viewer.scene.globe.show = true;
+                viewer.scene.globe.enableLighting = false;
+                viewer.scene.globe.depthTestAgainstTerrain = false;
+                viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString("#1f5f9f");
 
-      if (rangeRingEntities[id]) {
-        viewer.entities.remove(rangeRingEntities[id]);
-        delete rangeRingEntities[id];
-      }
-    }
-  });
+                /*
+                  关闭星空、太阳、月亮，避免看起来像纯太空背景。
+                */
+                viewer.scene.skyBox.show = false;
+                viewer.scene.sun.show = false;
+                viewer.scene.moon.show = false;
+                viewer.scene.skyAtmosphere.show = true;
+                viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("#202020");
 
-  /*
-    第一次收到平台后，优先飞到低空/海面平台附近，不要优先跟随卫星。
-  */
-  if (!firstCameraFlyDone && platforms.length > 0) {
-    const p =
-      platforms.find(x => isValidPlatform(x) && getAltM(x) < 50000) ||
-      platforms.find(isValidPlatform);
+                /*
+                  加载本地 NaturalEarthII 影像。
+                */
+                await addNaturalEarthImagery();
 
-    if (p) {
-      lookAtEarth(
-        Number(p.lon),
-        Number(p.lat),
-        3000000.0
-      );
+                viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
+                    Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
+                );
 
-      firstCameraFlyDone = true;
-    }
-  }
-}
+                const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+                handler.setInputAction(function(click) {
+                    const picked = viewer.scene.pick(click.position);
 
-function createEntity(p) {
-  const side = getSide(p);
-  const altM = getAltM(p);
-  const headingDeg = getHeadingDeg(p);
-  const pitchDeg = getPitchDeg(p);
-  const rollDeg = getRollDeg(p);
+                    if (
+                        Cesium.defined(picked) &&
+                        picked.id &&
+                        picked.id._platformId !== undefined
+                    ) {
+                        const pid = picked.id._platformId;
+                        selectPlatform(pid);
 
-  const color = side === "BLUE"
-    ? Cesium.Color.DODGERBLUE
-    : Cesium.Color.RED;
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: "platform_selected",
+                                msg_type: "platform_selected",
+                                platform_id: pid
+                            }));
+                        }
+                    }
+                }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-  const iconColor = side === "BLUE" ? "#4488ff" : "#ff4444";
+                /*
+                  初始视角：西太平洋方向，能看见地球表面。
+                */
+                lookAtEarth(156.0, 25.0, 8000000.0);
 
-  const position = Cesium.Cartesian3.fromDegrees(
-    Number(p.lon),
-    Number(p.lat),
-    altM
-  );
+                updateStatus("Cesium Globe ready. Waiting for platform_state...", "#0f0");
 
-  const entity = viewer.entities.add({
-    name: p.name || String(p.id),
-    _platformId: p.id,
-    position: position,
-    orientation: Cesium.Transforms.headingPitchRollQuaternion(
-      position,
-      new Cesium.HeadingPitchRoll(
-        Cesium.Math.toRadians(headingDeg),
-        Cesium.Math.toRadians(pitchDeg),
-        Cesium.Math.toRadians(rollDeg)
-      )
-    ),
-    billboard: {
-      image: "data:image/svg+xml," + encodeURIComponent(svgAircraft(iconColor)),
-      scale: 0.8,
-      alignedAxis: Cesium.Cartesian3.UNIT_Z,
-      color: p.alive === false ? Cesium.Color.GRAY : Cesium.Color.WHITE,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY
-    },
-    label: {
-      text: String(p.name || p.id).replace(/_/g, " "),
-      font: "11px Segoe UI, sans-serif",
-      fillColor: p.alive === false ? Cesium.Color.GRAY : color,
-      outlineColor: Cesium.Color.BLACK,
-      outlineWidth: 2,
-      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -20),
-      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 20000000),
-      disableDepthTestDistance: Number.POSITIVE_INFINITY
-    }
-  });
+                while (pendingMessages.length > 0) {
+                    handleMessage(pendingMessages.shift());
+                }
 
-  rangeRingEntities[String(p.id)] = viewer.entities.add({
-    _platformId: p.id,
-    polyline: {
-      positions: generateCircle(
-        Number(p.lon),
-        Number(p.lat),
-        altM,
-        Number(p.sensor_range_nm || 40)
-      ),
-      width: 1,
-      material: color.withAlpha(0.35),
-      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 20000000),
-      clampToGround: false
-    }
-  });
+                return true;
+            } catch (e) {
+                console.error("initViewer failed:", e);
+                updateStatus("initViewer failed: " + e.message, "#f00");
+                return false;
+            }
+        }
 
-  return entity;
-}
+        function connectWebSocket() {
+            const host = window.location.hostname || "127.0.0.1";
+            ws = new WebSocket(`ws://${host}:9010`);
 
-function updateEntity(entity, p) {
-  const side = getSide(p);
-  const altM = getAltM(p);
-  const headingDeg = getHeadingDeg(p);
-  const pitchDeg = getPitchDeg(p);
-  const rollDeg = getRollDeg(p);
+            ws.onopen = function() {
+                updateStatus("Connected — waiting for platform_state", "#0f0");
+            };
 
-  const position = Cesium.Cartesian3.fromDegrees(
-    Number(p.lon),
-    Number(p.lat),
-    altM
-  );
+            ws.onmessage = function(event) {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleMessage(msg);
+                } catch (e) {
+                    console.warn("WS parse error:", e);
+                }
+            };
 
-  entity.position = position;
-  entity.orientation = Cesium.Transforms.headingPitchRollQuaternion(
-    position,
-    new Cesium.HeadingPitchRoll(
-      Cesium.Math.toRadians(headingDeg),
-      Cesium.Math.toRadians(pitchDeg),
-      Cesium.Math.toRadians(rollDeg)
-    )
-  );
+            ws.onclose = function() {
+                updateStatus("Disconnected — reconnecting in 2s...", "#f00");
+                setTimeout(connectWebSocket, 2000);
+            };
 
-  const color = p.alive === false
-    ? Cesium.Color.GRAY
-    : (side === "BLUE" ? Cesium.Color.DODGERBLUE : Cesium.Color.RED);
+            ws.onerror = function(e) {
+                console.warn("WS error:", e);
+            };
+        }
 
-  if (entity.label) {
-    entity.label.fillColor = color;
-    entity.label.text = String(p.name || p.id).replace(/_/g, " ");
-  }
+        function handleMessage(msg) {
+            if (!viewer) {
+                pendingMessages.push(msg);
+                return;
+            }
 
-  if (entity.billboard) {
-    entity.billboard.color = p.alive === false
-      ? Cesium.Color.GRAY
-      : Cesium.Color.WHITE;
-  }
+            const msgType = msg.msg_type || msg.type;
 
-  const ring = rangeRingEntities[String(p.id)];
+            if (msgType === "platform_state") {
+                const platforms = Array.isArray(msg.platforms) ? msg.platforms : [];
+                updatePlatforms(platforms);
+                lastState = msg;
+                updateStatus(`Live — ${platforms.length} platforms`, "#0f0");
+                return;
+            }
 
-  if (ring && ring.polyline) {
-    ring.polyline.positions = generateCircle(
-      Number(p.lon),
-      Number(p.lat),
-      altM,
-      Number(p.sensor_range_nm || 40)
-    );
-  }
-}
+            if (msgType === "action_command" || msgType === "agent_action") {
+                renderActions(msg.actions || []);
+                return;
+            }
 
-function renderActions(actions) {
-  actions.forEach(a => {
-    const entity = platformEntities[String(a.id)];
+            if (msgType === "event") {
+                renderEvent(msg);
+                return;
+            }
 
-    if (!entity || !entity.position) {
-      return;
-    }
+            console.warn("Unknown message type:", msgType, msg);
+        }
 
-    const pos = entity.position.getValue(Cesium.JulianDate.now());
+        function updatePlatforms(platforms) {
+            if (!viewer || !Array.isArray(platforms)) {
+                return;
+            }
 
-    if (a.action === "FIRE" && a.parameters && a.parameters.target_id) {
-      const target = platformEntities[String(a.parameters.target_id)];
+            const seen = new Set();
 
-      if (target && target.position) {
-        const tpos = target.position.getValue(Cesium.JulianDate.now());
+            platforms.forEach(p => {
+                if (!p || p.id === undefined || !isValidPlatform(p)) {
+                    console.warn("Invalid platform skipped:", p);
+                    return;
+                }
 
-        const attackLine = viewer.entities.add({
-          polyline: {
-            positions: [pos, tpos],
-            width: 3,
-            material: new Cesium.PolylineDashMaterialProperty({
-              color: Cesium.Color.ORANGE
-            })
-          }
-        });
+                const id = String(p.id);
+                seen.add(id);
 
-        setTimeout(() => viewer.entities.remove(attackLine), 2000);
-      }
-    }
-  });
-}
+                if (platformEntities[id]) {
+                    updateEntity(platformEntities[id], p);
+                } else {
+                    platformEntities[id] = createEntity(p);
+                }
+            });
 
-function renderEvent(evt) {
-  console.log("event:", evt);
-}
+            Object.keys(platformEntities).forEach(id => {
+                if (!seen.has(id)) {
+                    viewer.entities.remove(platformEntities[id]);
+                    delete platformEntities[id];
 
-function selectPlatform(pid) {
-  Object.values(platformEntities).forEach(e => {
-    if (e.billboard) {
-      e.billboard.scale = 0.8;
-    }
+                    if (rangeRingEntities[id]) {
+                        viewer.entities.remove(rangeRingEntities[id]);
+                        delete rangeRingEntities[id];
+                    }
+                }
+            });
 
-    if (e.label) {
-      e.label.font = "11px Segoe UI, sans-serif";
-    }
-  });
+            /*
+              第一次收到平台后，优先飞到低空/海面平台附近，不要优先跟随卫星。
+            */
+            if (!firstCameraFlyDone && platforms.length > 0) {
+                const p =
+                    platforms.find(x => isValidPlatform(x) && getAltM(x) < 50000) ||
+                    platforms.find(isValidPlatform);
 
-  const e = platformEntities[String(pid)];
+                if (p) {
+                    lookAtEarth(
+                        Number(p.lon),
+                        Number(p.lat),
+                        3000000.0
+                    );
 
-  if (e) {
-    if (e.billboard) {
-      e.billboard.scale = 1.3;
-    }
+                    firstCameraFlyDone = true;
+                }
+            }
+        }
 
-    if (e.label) {
-      e.label.font = "14px bold Segoe UI, sans-serif";
-    }
-  }
-}
+        function createEntity(p) {
+            const side = getSide(p);
+            const altM = getAltM(p);
+            const headingDeg = getHeadingDeg(p);
+            const pitchDeg = getPitchDeg(p);
+            const rollDeg = getRollDeg(p);
 
-function generateCircle(lon, lat, alt, radiusNm) {
-  const points = [];
-  const radM = Number(radiusNm || 40) * 1852;
+            const color = side === "BLUE" ?
+                Cesium.Color.DODGERBLUE :
+                Cesium.Color.RED;
 
-  const center = Cesium.Cartesian3.fromDegrees(
-    Number(lon),
-    Number(lat),
-    Number(alt || 0)
-  );
+            const iconColor = side === "BLUE" ? "#4488ff" : "#ff4444";
 
-  const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+            const position = Cesium.Cartesian3.fromDegrees(
+                Number(p.lon),
+                Number(p.lat),
+                altM
+            );
 
-  for (let i = 0; i <= 64; i++) {
-    const angle = (i / 64) * Cesium.Math.TWO_PI;
-    const dx = radM * Math.cos(angle);
-    const dy = radM * Math.sin(angle);
-    const local = new Cesium.Cartesian3(dx, dy, 0);
+            const entity = viewer.entities.add({
+                name: p.name || String(p.id),
+                _platformId: p.id,
+                position: position,
+                orientation: Cesium.Transforms.headingPitchRollQuaternion(
+                    position,
+                    new Cesium.HeadingPitchRoll(
+                        Cesium.Math.toRadians(headingDeg),
+                        Cesium.Math.toRadians(pitchDeg),
+                        Cesium.Math.toRadians(rollDeg)
+                    )
+                ),
+                billboard: {
+                    image: "data:image/svg+xml," + encodeURIComponent(svgAircraft(iconColor)),
+                    scale: 0.8,
+                    alignedAxis: Cesium.Cartesian3.UNIT_Z,
+                    color: p.alive === false ? Cesium.Color.GRAY : Cesium.Color.WHITE,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                },
+                label: {
+                    text: String(p.name || p.id).replace(/_/g, " "),
+                    font: "11px Segoe UI, sans-serif",
+                    fillColor: p.alive === false ? Cesium.Color.GRAY : color,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 2,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                    pixelOffset: new Cesium.Cartesian2(0, -20),
+                    distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 20000000),
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                }
+            });
 
-    const world = Cesium.Matrix4.multiplyByPoint(
-      enuMatrix,
-      local,
-      new Cesium.Cartesian3()
-    );
+            rangeRingEntities[String(p.id)] = viewer.entities.add({
+                _platformId: p.id,
+                polyline: {
+                    positions: generateCircle(
+                        Number(p.lon),
+                        Number(p.lat),
+                        altM,
+                        Number(p.sensor_range_nm || 40)
+                    ),
+                    width: 1,
+                    material: color.withAlpha(0.35),
+                    distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 20000000),
+                    clampToGround: false
+                }
+            });
 
-    points.push(world);
-  }
+            return entity;
+        }
 
-  return points;
-}
+        function updateEntity(entity, p) {
+            const side = getSide(p);
+            const altM = getAltM(p);
+            const headingDeg = getHeadingDeg(p);
+            const pitchDeg = getPitchDeg(p);
+            const rollDeg = getRollDeg(p);
 
-function svgAircraft(color) {
-  return `
+            const position = Cesium.Cartesian3.fromDegrees(
+                Number(p.lon),
+                Number(p.lat),
+                altM
+            );
+
+            entity.position = position;
+            entity.orientation = Cesium.Transforms.headingPitchRollQuaternion(
+                position,
+                new Cesium.HeadingPitchRoll(
+                    Cesium.Math.toRadians(headingDeg),
+                    Cesium.Math.toRadians(pitchDeg),
+                    Cesium.Math.toRadians(rollDeg)
+                )
+            );
+
+            const color = p.alive === false ?
+                Cesium.Color.GRAY :
+                (side === "BLUE" ? Cesium.Color.DODGERBLUE : Cesium.Color.RED);
+
+            if (entity.label) {
+                entity.label.fillColor = color;
+                entity.label.text = String(p.name || p.id).replace(/_/g, " ");
+            }
+
+            if (entity.billboard) {
+                entity.billboard.color = p.alive === false ?
+                    Cesium.Color.GRAY :
+                    Cesium.Color.WHITE;
+            }
+
+            const ring = rangeRingEntities[String(p.id)];
+
+            if (ring && ring.polyline) {
+                ring.polyline.positions = generateCircle(
+                    Number(p.lon),
+                    Number(p.lat),
+                    altM,
+                    Number(p.sensor_range_nm || 40)
+                );
+            }
+        }
+
+        function renderActions(actions) {
+            actions.forEach(a => {
+                const entity = platformEntities[String(a.id)];
+
+                if (!entity || !entity.position) {
+                    return;
+                }
+
+                const pos = entity.position.getValue(Cesium.JulianDate.now());
+
+                if (a.action === "FIRE" && a.parameters && a.parameters.target_id) {
+                    const target = platformEntities[String(a.parameters.target_id)];
+
+                    if (target && target.position) {
+                        const tpos = target.position.getValue(Cesium.JulianDate.now());
+
+                        const attackLine = viewer.entities.add({
+                            polyline: {
+                                positions: [pos, tpos],
+                                width: 3,
+                                material: new Cesium.PolylineDashMaterialProperty({
+                                    color: Cesium.Color.ORANGE
+                                })
+                            }
+                        });
+
+                        setTimeout(() => viewer.entities.remove(attackLine), 2000);
+                    }
+                }
+            });
+        }
+
+        function renderEvent(evt) {
+            console.log("event:", evt);
+        }
+
+        function selectPlatform(pid) {
+            Object.values(platformEntities).forEach(e => {
+                if (e.billboard) {
+                    e.billboard.scale = 0.8;
+                }
+
+                if (e.label) {
+                    e.label.font = "11px Segoe UI, sans-serif";
+                }
+            });
+
+            const e = platformEntities[String(pid)];
+
+            if (e) {
+                if (e.billboard) {
+                    e.billboard.scale = 1.3;
+                }
+
+                if (e.label) {
+                    e.label.font = "14px bold Segoe UI, sans-serif";
+                }
+            }
+        }
+
+        function generateCircle(lon, lat, alt, radiusNm) {
+            const points = [];
+            const radM = Number(radiusNm || 40) * 1852;
+
+            const center = Cesium.Cartesian3.fromDegrees(
+                Number(lon),
+                Number(lat),
+                Number(alt || 0)
+            );
+
+            const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+
+            for (let i = 0; i <= 64; i++) {
+                const angle = (i / 64) * Cesium.Math.TWO_PI;
+                const dx = radM * Math.cos(angle);
+                const dy = radM * Math.sin(angle);
+                const local = new Cesium.Cartesian3(dx, dy, 0);
+
+                const world = Cesium.Matrix4.multiplyByPoint(
+                    enuMatrix,
+                    local,
+                    new Cesium.Cartesian3()
+                );
+
+                points.push(world);
+            }
+
+            return points;
+        }
+
+        function svgAircraft(color) {
+            return `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
          width="24" height="24">
       <path d="M12 2 L14 8 L20 10 L14 12 L12 18 L10 12 L4 10 L10 8 Z"
@@ -611,17 +610,18 @@ function svgAircraft(color) {
       <circle cx="12" cy="10" r="1.5" fill="#fff"/>
     </svg>
   `;
-}
+        }
 
-async function boot() {
-  const ok = await initViewer();
+        async function boot() {
+            const ok = await initViewer();
 
-  if (ok) {
-    connectWebSocket();
-  }
-}
+            if (ok) {
+                connectWebSocket();
+            }
+        }
 
-window.addEventListener("load", boot);
-</script>
+        window.addEventListener("load", boot);
+    </script>
 </body>
+
 </html>
